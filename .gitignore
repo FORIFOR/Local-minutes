@@ -1,14 +1,33 @@
-# Build outputs
-frontend/dist/
+# Node / Next
+node_modules/
+.next/
+out/
+dist/
+build/
 
-# Runtime data/logs
-backend/data/*.log
-
-# Python cache
-**/__pycache__/
+# Python
+.venv/
+venv/
+__pycache__/
 *.pyc
 
-# Node
-npm-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# Artifacts / Models / Data
+models/
+checkpoints/
+downloads/
+data/
+*.onnx
+*.pt
+*.safetensors
+*.so
+*.dylib
+*.tar*
+*.zip
+*.bz2
+
+# Logs & env
+.env*
+*.log
+
+# macOS
+.DS_Store
