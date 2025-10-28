@@ -1,0 +1,14 @@
+# Build outputs
+frontend/dist/
+
+# Runtime data/logs
+backend/data/*.log
+
+# Python cache
+**/__pycache__/
+*.pyc
+
+# Node
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*

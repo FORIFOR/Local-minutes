@@ -1,0 +1,25 @@
+asr:
+  name: sherpa-onnx-zipformer-ja-reazonspeech
+  url: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-zipformer-ja-reazonspeech-2024-08-01.tar.bz2
+  dest: ${M4_MODELS_DIR}/sherpa_jp
+
+diar:
+  seg:
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2
+    dest: ${M4_MODELS_DIR}/diar
+  emb:
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/nemo_en_titanet_small.onnx
+    dest: ${M4_MODELS_DIR}/diar
+
+
+ct2:
+  m2m100_418m:
+    url: https://huggingface.co/michaelfeil/ct2fast-m2m100_418M/resolve/main/model.tar.gz
+    dest: ${M4_MODELS_DIR}/ct2_m2m100_418m
+
+tts:
+  piper:
+    voice: ja_JP-lessac-medium
+    onnx: https://huggingface.co/rhasspy/piper-voices/resolve/main/ja/ja_JP/lessac/ja_JP-lessac-medium.onnx
+    json: https://huggingface.co/rhasspy/piper-voices/resolve/main/ja/ja_JP/lessac/ja_JP-lessac-medium.onnx.json
+    dest: ${M4_MODELS_DIR}/tts/piper
