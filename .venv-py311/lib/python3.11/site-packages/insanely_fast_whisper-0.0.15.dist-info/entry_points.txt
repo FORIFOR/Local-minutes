@@ -1,0 +1,3 @@
+[console_scripts]
+insanely-fast-whisper = insanely_fast_whisper.cli:main
+

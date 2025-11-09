@@ -6,6 +6,49 @@ echo "[setup] 対話式セットアップ (Ollama手動) を開始します"
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT_DIR"
 
+PYTHON_MIN_VERSION_MAJOR=3
+PYTHON_MIN_VERSION_MINOR=10
+
+python_supports_required_version() {
+  local cmd="$1"
+  "$cmd" -c "import sys; sys.exit(0 if sys.version_info[:2] >= ($PYTHON_MIN_VERSION_MAJOR, $PYTHON_MIN_VERSION_MINOR) else 1)" >/dev/null 2>&1
+}
+
+python_version_string() {
+  local cmd="$1"
+  "$cmd" -c 'import platform; print(platform.python_version())'
+}
+
+python_from_venv() {
+  local venv_dir="$1"
+  if [ -x "$venv_dir/bin/python3" ]; then
+    echo "$venv_dir/bin/python3"
+  elif [ -x "$venv_dir/bin/python" ]; then
+    echo "$venv_dir/bin/python"
+  else
+    echo ""
+  fi
+}
+
+choose_python_bin() {
+  local candidates=()
+  if [ -n "${M4_PYTHON_BIN:-}" ]; then
+    candidates+=("$M4_PYTHON_BIN")
+  fi
+  candidates+=(python3.12 python3.11 python3.10 python3)
+  for candidate in "${candidates[@]}"; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      local resolved
+      resolved=$(command -v "$candidate")
+      if python_supports_required_version "$resolved"; then
+        echo "$resolved"
+        return 0
+      fi
+    fi
+  done
+  return 1
+}
+
 if [ -f .env ]; then
   echo "[setup] 既存の .env が見つかりました。上書きせずに継続します。"
 fi
@@ -17,12 +60,56 @@ fi
 
 read -r -p "Python venv と Python依存を導入しますか? (y/N) " yn
 if [[ ${yn:-N} == y || ${yn:-N} == Y ]]; then
-  # 既存の.venvが移動により壊れている場合は再作成
-  if [ -d .venv ] && [ ! -x .venv/bin/python3 ]; then
-    echo "[setup] 既存の .venv が壊れています。再作成します。"
-    rm -rf .venv
+  VENV_DIR=${M4_VENV_DIR:-.venv}
+  ACTIVE_PYTHON=""
+
+  if [ -n "${VIRTUAL_ENV:-}" ]; then
+    ACTIVE_PYTHON=$(python_from_venv "$VIRTUAL_ENV")
+    if [ -z "$ACTIVE_PYTHON" ]; then
+      ACTIVE_PYTHON="python"
+    fi
+
+    if ! python_supports_required_version "$ACTIVE_PYTHON"; then
+      version=$(python_version_string "$ACTIVE_PYTHON")
+      echo "[setup] 現在の仮想環境 ($VIRTUAL_ENV) の Python は ${version} です。Python ${PYTHON_MIN_VERSION_MAJOR}.${PYTHON_MIN_VERSION_MINOR}+ を有効化してから再実行してください。"
+      exit 1
+    fi
+    echo "[setup] 現在アクティブな仮想環境 ($VIRTUAL_ENV) を使用します。"
+  else
+    if [ -d "$VENV_DIR" ]; then
+      ACTIVE_PYTHON=$(python_from_venv "$VENV_DIR")
+      if [ -z "$ACTIVE_PYTHON" ]; then
+        echo "[setup] 既存の $VENV_DIR が壊れています。再作成します。"
+        rm -rf "$VENV_DIR"
+      elif ! python_supports_required_version "$ACTIVE_PYTHON"; then
+        version=$(python_version_string "$ACTIVE_PYTHON")
+        echo "[setup] 既存の $VENV_DIR は Python ${version} です。Python ${PYTHON_MIN_VERSION_MAJOR}.${PYTHON_MIN_VERSION_MINOR}+ へ再作成します。"
+        rm -rf "$VENV_DIR"
+      fi
+    fi
+
+    if [ ! -d "$VENV_DIR" ]; then
+      PYTHON_BOOTSTRAP=$(choose_python_bin) || {
+        echo "[setup] Python ${PYTHON_MIN_VERSION_MAJOR}.${PYTHON_MIN_VERSION_MINOR}+ を見つけられませんでした。環境に導入してから再実行してください。"
+        exit 1
+      }
+      echo "[setup] $(basename "$PYTHON_BOOTSTRAP") で $VENV_DIR を作成します。"
+      "$PYTHON_BOOTSTRAP" -m venv "$VENV_DIR"
+    fi
+
+    # 作りたて/既存どちらでもactivate
+    # shellcheck disable=SC1090
+    . "$VENV_DIR/bin/activate"
+    ACTIVE_PYTHON=$(python_from_venv "$VENV_DIR")
   fi
-  /bin/bash -lc 'python3 -m venv .venv && . .venv/bin/activate && python3 -m pip install -U pip wheel && python3 -m pip install -r backend/requirements.txt'
+
+  if [ -z "$ACTIVE_PYTHON" ]; then
+    echo "[setup] Python 実行ファイルを特定できませんでした。"
+    exit 1
+  fi
+
+  "$ACTIVE_PYTHON" -m pip install -U pip wheel
+  "$ACTIVE_PYTHON" -m pip install -r backend/requirements.txt
 fi
 
 read -r -p "Node.js 依存 (root + frontend) を導入しますか? (y/N) " yn

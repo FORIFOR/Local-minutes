@@ -4,6 +4,7 @@ import json
 import time
 from typing import Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocketState
 from loguru import logger
 
 from backend.store.db import validate_ws_token, insert_segment
@@ -14,6 +15,17 @@ from backend.nlp.translate_ct2 import Translator
 
 
 ws_router = APIRouter()
+
+
+async def _safe_close_ws(ws: WebSocket, code: int = 1011) -> None:
+    """WebSocketの状態を確認してから安全にcloseする。"""
+    try:
+        if ws.client_state in (WebSocketState.CONNECTING, WebSocketState.CONNECTED):
+            await ws.close(code=code)
+    except RuntimeError as close_err:
+        # close送信済みの場合は無視。それ以外はログだけ残す
+        if "close message has been sent" not in str(close_err).lower():
+            logger.bind(tag="ws.stream").debug(f"safe_close_ws skipped: {close_err}")
 
 
 @ws_router.websocket("/ws/stream")
@@ -200,9 +212,16 @@ async def ws_stream(ws: WebSocket):
 
     except WebSocketDisconnect:
         logger.bind(tag="ws.stream").info("client disconnected")
+    except RuntimeError as e:
+        msg = str(e)
+        if "websocket is not connected" in msg.lower():
+            logger.bind(tag="ws.stream").info("client closed websocket before accept/receive completed")
+        else:
+            logger.bind(tag="ws.stream").exception(e)
+        await _safe_close_ws(ws, code=1011)
     except Exception as e:
         logger.bind(tag="ws.stream").exception(e)
-        await ws.close()
+        await _safe_close_ws(ws, code=1011)
     finally:
         try:
             wav.close()
