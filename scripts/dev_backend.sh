@@ -3,9 +3,12 @@ set -euo pipefail
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT_DIR"
 
-# .env を読み込み（PORT_BACKEND / DEV_BACKEND_HOST を尊重）
+# .env / .env.local を読み込み（local が優先）
 if [ -f .env ]; then
   set -a; source .env; set +a
+fi
+if [ -f .env.local ]; then
+  set -a; source .env.local; set +a
 fi
 
 HOST="${DEV_BACKEND_HOST:-0.0.0.0}"

@@ -23,6 +23,7 @@ from backend.diar.fluidaudio import (
     build_minutes_text,
     run_fluidaudio,
 )
+from backend.services.cloud_sync import sync_event_to_cloud_blocking
 
 router = APIRouter()
 STOPPING_EVENTS: Set[str] = set()
@@ -92,6 +93,10 @@ def _run_post_pipeline(event_id: str, should_summary: bool) -> None:
 
             finalize_summary_for_event(event_id)
         touch_updated(event_id)
+        try:
+            sync_event_to_cloud_blocking(event_id, reason="post-pipeline")
+        except Exception as exc:
+            logger.bind(tag="cloud.sync", event=event_id).warning("cloud sync failed", error=repr(exc))
     except Exception as exc:
         logger.bind(tag="job.batch").exception(exc)
     logger.bind(tag="job.batch").info(f"post pipeline done for {event_id}")

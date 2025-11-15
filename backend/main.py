@@ -14,6 +14,7 @@ from backend.api.routes import router as api_router
 from backend.api.auth import router as auth_router
 from backend.api.ws import ws_router, get_recent_stream_stats
 from backend.api.google_sync import router as google_sync_router
+from backend.api.cloud_sync import router as cloud_sync_router
 from backend.store.db import init_db
 
 LOG_DIR = os.getenv("LOG_DIR", "backend/data")
@@ -25,6 +26,7 @@ app.include_router(auth_router, prefix="")
 app.include_router(api_router, prefix="")
 app.include_router(google_sync_router, prefix="")
 app.include_router(ws_router)
+app.include_router(cloud_sync_router, prefix="/api/cloud")
 
 
 def _log_runtime_config() -> None:
