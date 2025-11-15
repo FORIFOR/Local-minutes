@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from backend.cloud.api import auth_google, google_calendar, meetings
 from backend.cloud.config import settings
@@ -29,6 +30,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
 
 app.include_router(auth_google.router)
 app.include_router(meetings.router, prefix="/api/meetings")
