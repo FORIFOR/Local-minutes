@@ -15,9 +15,12 @@ def startup() -> None:
     init_db()
 
 
-origins = {settings.frontend_origin.rstrip("/")}
-origins.add("http://localhost:5173")
-origins.add("http://127.0.0.1:5173")
+origins = {
+    settings.frontend_origin.rstrip("/"),
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://local-minutes-front.pages.dev",
+}
 
 app.add_middleware(
     CORSMiddleware,
