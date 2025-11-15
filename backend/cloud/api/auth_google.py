@@ -28,7 +28,9 @@ oauth.register(
 async def google_login(request: Request):
     if not settings.google_client_id or not settings.google_client_secret:
         raise HTTPException(status_code=500, detail="Google OAuth is not configured")
-    redirect_uri = settings.google_redirect_uri or str(request.url_for("google_callback"))
+    redirect_uri = settings.google_redirect_uri
+    if not redirect_uri:
+        raise HTTPException(status_code=500, detail="GOOGLE_REDIRECT_URI is not configured")
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
@@ -61,4 +63,3 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
     redirect_to = settings.google_login_redirect_url or "/"
     target = f"{settings.frontend_origin.rstrip('/')}{redirect_to}?token={access_token}"
     return RedirectResponse(url=target)
-
