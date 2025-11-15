@@ -1,0 +1,21 @@
+# Node
+node_modules/
+.npm/
+.next/
+dist/
+out/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.mypy_cache/
+
+# Recordings / artifacts
+backend/artifacts/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

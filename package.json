@@ -1,0 +1,47 @@
+{
+  "type": "module",
+  "name": "local-minutes",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "npm-run-all -p dev:backend dev:frontend-auto",
+    "dev:backend": "bash scripts/dev_backend.sh",
+    "dev:frontend-auto": "node scripts/dev_frontend.js",
+    "setup": "bash scripts/setup.sh",
+    "build": "npm --prefix frontend run build",
+    "start": "bash scripts/start_backend.sh",
+    "typecheck": "npm --prefix frontend run typecheck",
+    "serve:frontend": "node proxy/server.js",
+    "sink": "node tests/asr_e2e/ws_sink.js",
+    "pcm2wav": "node tests/asr_e2e/pcm_to_wav.js",
+    "test:asr:e2e": "node tests/asr_e2e/ws_sink.js",
+    "send:silence": "node tests/asr_e2e/ws_sender.js --silence --seconds=10 --url=ws://127.0.0.1:8765",
+    "send:wav": "node tests/asr_e2e/ws_sender.js --wav tests/asr_e2e/assets/yt.wav --url=ws://127.0.0.1:8765",
+    "test:asr:auto": "node tests/asr_e2e/run_all.mjs",
+    "results": "python3.11 tests/asr_e2e/collect_results.py",
+    "results:table": "python3.11 tests/asr_e2e/collect_results.py tests/asr_e2e/out",
+    "results:csv": "python3.11 tests/asr_e2e/collect_results.py --run-dir tests/asr_e2e/out --csv",
+    "results:compare": "python3.11 tests/asr_e2e/collect_results.py --run-dir tests/asr_e2e/out --compare tests/asr_e2e/baseline.json --fail-on-regression",
+    "results:auto": "python3.11 tests/asr_e2e/transcribe_local.py && python3.11 tests/asr_e2e/collect_results.py",
+    "bench:yt": "python3 tests/asr_e2e/yt_bench.py",
+    "yt:audio": "python3 tests/asr_e2e/yt_audio.py",
+    "wav:fix16k": "ffmpeg -y -i /tmp/yt.wav -ar 16000 -ac 1 -c:a pcm_s16le tests/asr_e2e/assets/yt.wav",
+    "ref:yt": "python3 tests/asr_e2e/ref_from_yt.py",
+    "export:hyp": "node tests/asr_e2e/export_hyp.js",
+    "bench:e2e": "echo '使い方: npm run ref:yt -- --url=... && npm run yt:audio -- --url=... && npm run wav:fix16k && npm run send:wav -- --url=wss://... && npm run export:hyp -- --base=http://... --event=... && npm run results'"
+  },
+  "devDependencies": {
+    "execa": "^9.6.0",
+    "get-port": "^7.1.0",
+    "npm-run-all": "^4.1.5",
+    "open": "^10.2.0",
+    "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "express": "^4.19.2",
+    "helmet": "^7.0.0",
+    "http-proxy-middleware": "^3.0.0",
+    "ws": "^8.18.0"
+  }
+}

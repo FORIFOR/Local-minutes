@@ -1,0 +1,16 @@
+# Caddy configuration example: expose only the UI via HTTPS
+ui.example.com {
+  encode zstd gzip
+  reverse_proxy 127.0.0.1:3000 {
+    header_up Host {host}
+    header_up X-Forwarded-Proto {scheme}
+    header_up X-Forwarded-Host {host}
+  }
+
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    X-Frame-Options "DENY"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+  }
+}
