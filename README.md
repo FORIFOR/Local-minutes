@@ -140,6 +140,60 @@ make up   # 互換。内部で npm run dev を呼びます
    - ブラウザ → `https://ui.example.com` で要約生成を行い、ネットワークタブで `/api/events/<id>/summary/stream` が 200 / `text/event-stream` になっていることを確認します。
    - FastAPI に直接アクセスできないこと（`curl http://<public-ip>:8000` が失敗すること）を確認します。
 
+## Cloudflare Pages + Render でのクラウド公開
+
+ローカルで録音／要約を行い、結果だけクラウドに送る構成を採る場合は以下の手順で
+フロントエンドを Cloudflare Pages、バックエンドを Render に配置します。
+
+### 1. Vite の環境変数を分離
+
+`frontend/.env.development` と `frontend/.env.production` を追加し、
+
+```
+# frontend/.env.development
+VITE_API_BASE=http://localhost:8001
+VITE_WS_BASE=ws://localhost:8001
+VITE_ENABLE_GOOGLE_LOGIN=true
+VITE_ENABLE_GOOGLE_SYNC=true
+
+# frontend/.env.production
+VITE_API_BASE=https://m4-meet-backend.onrender.com
+VITE_WS_BASE=wss://m4-meet-backend.onrender.com
+VITE_ENABLE_GOOGLE_LOGIN=true
+VITE_ENABLE_GOOGLE_SYNC=true
+```
+
+というように API/WS の接続先を切り替えます。`frontend/src/lib/config.ts`
+では `import.meta.env.VITE_API_BASE` 等を参照しています。
+
+### 2. Cloudflare Pages でビルド
+
+1. Cloudflare ダッシュボード → *Workers & Pages* → **Create application** → Pages
+2. GitHub の本リポジトリを接続
+3. Build 設定
+   - **Root directory**: `frontend`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
+   - **Framework preset**: Vite
+4. Environment variables に `VITE_API_BASE=https://m4-meet-backend.onrender.com`
+   (必要であれば `VITE_ENABLE_GOOGLE_LOGIN=true` など) を登録
+5. Deploy を実行し、`https://<project>.pages.dev` が生成されることを確認
+
+### 3. Render 側の CORS を更新
+
+Render で稼働している FastAPI（`backend/main_cloud.py`）の CORS 設定に
+Cloudflare Pages の URL (`https://<project>.pages.dev`) を追加します。
+これで Pages → Render 間の `fetch` とクッキー認証が許可されます。
+
+### 4. 動作確認
+
+- Cloudflare Pages 上の UI で Google ログインや会議一覧が機能するか
+- Network タブで API リクエストが `https://m4-meet-backend.onrender.com` に飛んでいるか
+- Render ログに 200 OK が記録されているか
+
+必要に応じて Pages に Custom Domain を割り当て、Google OAuth の
+Javascript origin / Redirect URI に追加してください。
+
 ## ユーザ管理
 
 - 初回アクセス時は WebUI の `/auth/register` からユーザを作成してください。
