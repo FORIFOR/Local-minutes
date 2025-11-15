@@ -33,9 +33,9 @@ app.add_middleware(
 
 app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
 
-app.include_router(auth_google.router)
+app.include_router(auth_google.router, prefix="/api/auth")
 app.include_router(meetings.router, prefix="/api/meetings")
-app.include_router(google_calendar.router, prefix="/api")
+app.include_router(google_calendar.router, prefix="/api/google")
 
 
 @app.get("/health")
