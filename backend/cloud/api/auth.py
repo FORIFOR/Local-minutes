@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.cloud.db import get_db
@@ -17,3 +17,13 @@ def read_me(user: User = Depends(get_current_user), db: Session = Depends(get_db
         "email": user.email,
         "name": user.name,
     }
+
+
+@router.post("/login")
+def email_login_not_supported() -> None:
+    raise HTTPException(status_code=400, detail="Email/password login is not supported. Use Google login.")
+
+
+@router.post("/register")
+def email_register_not_supported() -> None:
+    raise HTTPException(status_code=400, detail="Email/password registration is not supported. Use Google login.")

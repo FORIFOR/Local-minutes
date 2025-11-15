@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from authlib.integrations.starlette_client import OAuth
 
 from ..config import settings
 from ..db import get_db
 from ..models.user import User
-from ..security import create_access_token, get_current_user
+from ..security import create_access_token
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter()
 
 oauth = OAuth()
 oauth.register(
@@ -62,13 +62,3 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
     target = f"{settings.frontend_origin.rstrip('/')}{redirect_to}?token={access_token}"
     return RedirectResponse(url=target)
 
-
-@router.get("/me")
-def me(user: User = Depends(get_current_user)):
-    return {"id": user.id, "email": user.email, "name": user.name}
-
-
-@router.get("/token")
-def exchange_token(user: User = Depends(get_current_user)):
-    token = create_access_token(user.id)
-    return JSONResponse({"token": token})
