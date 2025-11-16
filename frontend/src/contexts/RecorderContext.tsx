@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { api } from '../lib/config'
+import { hasLocalBackend, localApi, localWs } from '../lib/config'
 import { PcmSender } from '../audio/pcm-sender'
 
 export type LiveTranscript = {
@@ -57,7 +57,7 @@ const isSafariBrowser = () => {
 }
 
 async function createEvent(title?: string) {
-  const response = await fetch(api('/api/events'), {
+  const response = await fetch(localApi('/api/events'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -73,7 +73,7 @@ async function createEvent(title?: string) {
 }
 
 async function fetchToken(eventId: string) {
-  const res = await fetch(api(`/api/events/${eventId}/start`), { method: 'POST' })
+  const res = await fetch(localApi(`/api/events/${eventId}/start`), { method: 'POST' })
   if (!res.ok) {
     throw new Error('録音トークンの取得に失敗しました')
   }
@@ -276,21 +276,24 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
   const startRecording = useCallback(
     async (options?: StartRecordingOptions) => {
       if (isRecording) return
+      if (!hasLocalBackend) {
+        throw new Error('ローカルバックエンドが利用できません')
+      }
       try {
         let event = options?.eventId ? { id: options.eventId } : currentEvent
-    if (!event) {
-      event = await createEvent(options?.title)
-    }
-    setCurrentEvent(event)
-    const { token } = await fetchToken(event.id)
-    event.ws_token = token
+        if (!event) {
+          event = await createEvent(options?.title)
+        }
+        setCurrentEvent(event)
+        const { token } = await fetchToken(event.id)
+        event.ws_token = token
 
         const stream = await getAudioStream()
         streamRef.current = stream
         setTranscripts([])
         setWsStats({})
 
-        const wsUrl = api('/ws/stream').replace('http', 'ws') + `?event_id=${event.id}&token=${event.ws_token}`
+        const wsUrl = `${localWs('/ws/stream')}?event_id=${event.id}&token=${event.ws_token}`
         const ws = new WebSocket(wsUrl)
         wsRef.current = ws
 
@@ -332,7 +335,15 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
         throw err
       }
     },
-    [cleanupStream, currentEvent, getAudioStream, isRecording, startAudioLevelMonitoring, updateTranscriptsFromMessage]
+    [
+      cleanupStream,
+      currentEvent,
+      getAudioStream,
+      isRecording,
+      hasLocalBackend,
+      startAudioLevelMonitoring,
+      updateTranscriptsFromMessage,
+    ]
   )
 
   const stopRecording = useCallback(async () => {
@@ -343,7 +354,7 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
       stopAudioLevelMonitoring()
       if (currentEvent?.id) {
         try {
-          await fetch(api(`/api/events/${currentEvent.id}/stop`), { method: 'POST' })
+          await fetch(localApi(`/api/events/${currentEvent.id}/stop`), { method: 'POST' })
         } catch (err) {
           console.warn('stop API failed', err)
         }

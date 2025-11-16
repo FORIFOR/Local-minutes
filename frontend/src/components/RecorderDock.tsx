@@ -1,17 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
-import { api } from '../lib/config'
+import { hasLocalBackend, localApi } from '../lib/config'
 import { navigateApp } from '../lib/navigation'
 
 export default function RecorderDock() {
   const [busy, setBusy] = useState(false)
   const [open, setOpen] = useState(false)
 
+  if (!hasLocalBackend) {
+    return null
+  }
+
   const createAndGo = async (autostart: boolean) => {
     setBusy(true)
     try {
       const now = Math.floor(Date.now()/1000)
-      const r = await fetch(api('/api/events'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: 'アドホック録音', start_ts: now, lang: 'ja' }) })
+      const r = await fetch(localApi('/api/events'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: 'アドホック録音', start_ts: now, lang: 'ja' }) })
       const j = await r.json()
       navigateApp(`/meetings/${j.id}${autostart ? '?autostart=1' : ''}`)
     } finally {

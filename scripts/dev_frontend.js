@@ -28,6 +28,7 @@ if (fs.existsSync(envPath)) {
 // フロントエンドからは同一オリジン経由でAPIを叩くので VITE_* は空にする
 process.env.VITE_API_BASE = ''
 process.env.VITE_WS_BASE = ''
+process.env.VITE_LOCAL_API_BASE = ''
 
 function readBackendPortSync() {
   const portFile = path.join(root, '.backend_port')
