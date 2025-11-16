@@ -1,3 +1,4 @@
+import './setupFetch'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
@@ -13,6 +14,7 @@ import Help from './pages/Help'
 import AuthLayout from './pages/AuthLayout'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import LoginSuccess from './pages/LoginSuccess'
 import RequireAuth from './components/RequireAuth'
 import { AuthProvider } from './contexts/AuthContext'
 import { RecorderProvider } from './contexts/RecorderContext'
@@ -34,6 +36,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="login" replace /> },
       { path: 'login', element: <Login /> },
+      { path: 'login-success', element: <LoginSuccess /> },
       { path: 'register', element: <Register /> },
     ],
   },

@@ -4,7 +4,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.responses import Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -12,6 +13,8 @@ from passlib.context import CryptContext
 from .config import settings
 from .db import get_db
 from .models.user import User
+
+AUTH_COOKIE_NAME = "access_token"
 
 bearer_scheme = HTTPBearer(auto_error=False)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
@@ -43,13 +46,39 @@ def decode_access_token(token: str) -> Optional[int]:
         return None
 
 
+def set_auth_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        AUTH_COOKIE_NAME,
+        token,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        max_age=settings.cookie_max_age,
+        path="/",
+    )
+
+
+def clear_auth_cookie(response: Response) -> None:
+    response.delete_cookie(AUTH_COOKIE_NAME, path="/")
+
+
+def user_payload(user: User) -> dict:
+    return {"id": user.id, "email": user.email, "name": user.name}
+
+
 def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
-    if credentials is None:
+    token: Optional[str] = None
+    if credentials:
+        token = credentials.credentials
+    if not token:
+        token = request.cookies.get(AUTH_COOKIE_NAME)
+    if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing credentials")
-    user_id = decode_access_token(credentials.credentials)
+    user_id = decode_access_token(token)
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     user = db.query(User).filter(User.id == user_id).first()

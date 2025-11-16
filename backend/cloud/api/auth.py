@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from backend.cloud.db import get_db
 from backend.cloud.models.user import User
 from backend.cloud.security import (
-    create_access_token,
+    clear_auth_cookie,
     get_current_user,
     hash_password,
+    set_auth_cookie,
+    user_payload,
     verify_password,
+    create_access_token,
 )
 
 router = APIRouter()
@@ -24,11 +28,6 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
-
-
-class AuthResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
 
 
 class MeResponse(BaseModel):
@@ -45,8 +44,15 @@ def read_me(user: User = Depends(get_current_user)) -> User:
     return user
 
 
-@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-def register(body: RegisterRequest, db: Session = Depends(get_db)) -> AuthResponse:
+def _make_auth_response(user: User) -> JSONResponse:
+    token = create_access_token(user.id)
+    response = JSONResponse(user_payload(user))
+    set_auth_cookie(response, token)
+    return response
+
+
+@router.post("/register", response_model=MeResponse, status_code=status.HTTP_201_CREATED)
+def register(body: RegisterRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email).first()
     if user:
         if user.password_hash:
@@ -63,16 +69,21 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)) -> AuthRespon
         db.add(user)
     db.commit()
     db.refresh(user)
-    token = create_access_token(user.id)
-    return AuthResponse(access_token=token)
+    return _make_auth_response(user)
 
 
-@router.post("/login", response_model=AuthResponse)
-def login(body: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
+@router.post("/login", response_model=MeResponse)
+def login(body: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email).first()
     if not user or not user.password_hash:
         raise HTTPException(status_code=401, detail="Invalid email or password.")
     if not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
-    token = create_access_token(user.id)
-    return AuthResponse(access_token=token)
+    return _make_auth_response(user)
+
+
+@router.post("/logout")
+def logout() -> JSONResponse:
+    response = JSONResponse({"ok": True})
+    clear_auth_cookie(response)
+    return response
