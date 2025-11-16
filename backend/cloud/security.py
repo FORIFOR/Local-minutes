@@ -14,7 +14,7 @@ from .db import get_db
 from .models.user import User
 
 bearer_scheme = HTTPBearer(auto_error=False)
-pwd_context = CryptContext(schemes=["bcrypt_sha256"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
