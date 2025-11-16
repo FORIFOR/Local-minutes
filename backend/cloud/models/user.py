@@ -12,6 +12,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     name = Column(String(255), nullable=True)
+    password_hash = Column(String(255), nullable=True)
     google_id = Column(String(255), unique=True, nullable=True, index=True)
     google_access_token = Column(Text, nullable=True)
     google_refresh_token = Column(Text, nullable=True)
