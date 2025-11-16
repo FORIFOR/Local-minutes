@@ -1,0 +1,59 @@
+from __future__ import annotations
+
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from backend.cloud.db import get_db
+from backend.cloud.models.meeting import Meeting
+from backend.cloud.models.user import User
+from backend.cloud.security import get_current_user
+
+router = APIRouter()
+
+
+def _serialize_meeting(meeting: Meeting) -> dict:
+    return {
+        "id": meeting.id,
+        "title": meeting.title,
+        "started_at": meeting.started_at.isoformat() if meeting.started_at else None,
+        "ended_at": meeting.ended_at.isoformat() if meeting.ended_at else None,
+        "summary": meeting.summary,
+        "full_transcript": meeting.full_transcript,
+        "google_sync_enabled": meeting.google_sync_enabled,
+    }
+
+
+@router.get("/events")
+def list_events(
+    limit: int = 3,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> List[dict]:
+    """Dashboardカードで使う最近のイベント一覧。"""
+    limit = max(1, min(limit, 50))
+    meetings = (
+        db.query(Meeting)
+        .filter(Meeting.user_id == user.id)
+        .order_by(Meeting.started_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [_serialize_meeting(m) for m in meetings]
+
+
+@router.get("/events/{meeting_id}")
+def read_event(
+    meeting_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
+    meeting: Optional[Meeting] = (
+        db.query(Meeting)
+        .filter(Meeting.id == meeting_id, Meeting.user_id == user.id)
+        .first()
+    )
+    if meeting is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return _serialize_meeting(meeting)

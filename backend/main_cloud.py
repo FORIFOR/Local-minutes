@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from backend.cloud.api import auth, auth_google, google_calendar, meetings
+from backend.cloud.api import auth, auth_google, events, google_calendar, health, meetings
 from backend.cloud.config import settings
 from backend.cloud.db import init_db
 
@@ -23,9 +25,11 @@ origins = {
     "https://local-minutes-front.pages.dev",
 }
 
+allow_origin_regex = os.getenv("FRONTEND_ORIGIN_REGEX", "")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(origins),
+    allow_origin_regex=allow_origin_regex or r"https://.*\.local-minutes-front\.pages\.dev",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,6 +41,8 @@ app.include_router(auth.router, prefix="/api/auth")
 app.include_router(auth_google.router, prefix="/api/auth")
 app.include_router(meetings.router, prefix="/api/meetings")
 app.include_router(google_calendar.router, prefix="/api/google")
+app.include_router(events.router, prefix="/api")
+app.include_router(health.router, prefix="/api/health")
 
 
 @app.get("/health")
