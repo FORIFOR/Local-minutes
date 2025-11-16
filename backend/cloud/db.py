@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
-from typing import Generator
+from typing import Generator, List
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 from .config import settings
@@ -21,6 +20,7 @@ def init_db() -> None:
     from .models import meeting, user  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _apply_simple_migrations()
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -29,3 +29,17 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+def _apply_simple_migrations() -> None:
+    """Ensure newer columns exist even if the table was created before."""
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        if "cloud_users" in inspector.get_table_names():
+            user_cols = {col["name"] for col in inspector.get_columns("cloud_users")}
+            if "password_hash" not in user_cols:
+                conn.execute(text("ALTER TABLE cloud_users ADD COLUMN password_hash VARCHAR(255)"))
+        if "cloud_meetings" in inspector.get_table_names():
+            meeting_cols = {col["name"] for col in inspector.get_columns("cloud_meetings")}
+            if "full_transcript" not in meeting_cols:
+                conn.execute(text("ALTER TABLE cloud_meetings ADD COLUMN full_transcript TEXT"))
