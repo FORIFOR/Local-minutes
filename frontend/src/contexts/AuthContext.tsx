@@ -19,6 +19,16 @@ type AuthContextValue = {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+const TOKEN_KEY = 'accessToken'
+
+const getStoredToken = () => localStorage.getItem(TOKEN_KEY)
+const storeToken = (token?: string | null) => {
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token)
+  } else {
+    localStorage.removeItem(TOKEN_KEY)
+  }
+}
 
 async function jsonRequest(path: string, init: RequestInit = {}) {
   const res = await fetch(api(path), {
@@ -50,14 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchMe = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(api('/api/auth/me'), { credentials: 'include' })
+      const headers: HeadersInit = {}
+      const token = getStoredToken()
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const res = await fetch(api('/api/auth/me'), { credentials: 'include', headers })
       if (!res.ok) {
+        storeToken(null)
         setUser(null)
         return
       }
       const data = await res.json()
       setUser(data)
     } catch {
+      storeToken(null)
       setUser(null)
     } finally {
       setLoading(false)
@@ -68,23 +83,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void fetchMe()
   }, [fetchMe])
 
-  const loginRequest = useCallback(async (email: string, password: string) => {
-    setAuthError(null)
-    const body = await jsonRequest('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    })
-    setUser(body)
+  const applyPayload = useCallback((payload: any) => {
+    if (!payload) return
+    if (payload.token) {
+      storeToken(payload.token)
+    }
+    const { token, ...rest } = payload
+    setUser(rest)
   }, [])
 
-  const registerRequest = useCallback(async (name: string, email: string, password: string) => {
-    setAuthError(null)
-    const body = await jsonRequest('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ name, email, password }),
-    })
-    setUser(body)
-  }, [])
+  const loginRequest = useCallback(
+    async (email: string, password: string) => {
+      setAuthError(null)
+      const body = await jsonRequest('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      })
+      applyPayload(body)
+    },
+    [applyPayload]
+  )
+
+  const registerRequest = useCallback(
+    async (name: string, email: string, password: string) => {
+      setAuthError(null)
+      const body = await jsonRequest('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password }),
+      })
+      applyPayload(body)
+    },
+    [applyPayload]
+  )
 
   const logout = useCallback(async () => {
     setAuthError(null)
@@ -93,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore logout errors */
     } finally {
+      storeToken(null)
       setUser(null)
     }
   }, [])

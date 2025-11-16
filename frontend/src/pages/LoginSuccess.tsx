@@ -5,10 +5,12 @@ import { useAuth } from '../contexts/AuthContext'
 export default function LoginSuccess() {
   const [params] = useSearchParams()
   const next = params.get('next') || '/meetings'
+  const token = params.get('token')
   const { refresh } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
+    if (token) localStorage.setItem('accessToken', token)
     void (async () => {
       try {
         await refresh()
@@ -16,7 +18,7 @@ export default function LoginSuccess() {
         navigate(next, { replace: true })
       }
     })()
-  }, [refresh, next, navigate])
+  }, [refresh, next, navigate, token])
 
   return (
     <div className="p-6">

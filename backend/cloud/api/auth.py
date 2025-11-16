@@ -46,7 +46,9 @@ def read_me(user: User = Depends(get_current_user)) -> User:
 
 def _make_auth_response(user: User) -> JSONResponse:
     token = create_access_token(user.id)
-    response = JSONResponse(user_payload(user))
+    payload = user_payload(user)
+    payload["token"] = token
+    response = JSONResponse(payload)
     set_auth_cookie(response, token)
     return response
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Generator, List
+import os
+from typing import Generator
 
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
@@ -8,10 +9,16 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from .config import settings
 
 connect_args = {}
-if settings.database_url.startswith("sqlite"):
+database_url = settings.database_url
+if database_url.startswith("sqlite:///"):
     connect_args["check_same_thread"] = False
+    path = database_url.replace("sqlite:///", "", 1)
+    if not path.startswith("/"):
+        os.makedirs(settings.sqlite_dir, exist_ok=True)
+        path = os.path.join(settings.sqlite_dir, path)
+        database_url = f"sqlite:///{path}"
 
-engine = create_engine(settings.database_url, connect_args=connect_args)
+engine = create_engine(database_url, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
