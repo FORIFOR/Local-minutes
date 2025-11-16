@@ -8,6 +8,28 @@ export function api(path: string) {
   return `${API_BASE}${path}`
 }
 
+/**
+ * credentials=include 付きで JSON を取得するヘルパー
+ */
+export async function apiFetch(path: string, init: RequestInit = {}) {
+  const res = await fetch(api(path), {
+    ...init,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init.headers || {}),
+    },
+  })
+  if (!res.ok) {
+    throw Object.assign(new Error(`API ${res.status}`), { status: res.status })
+  }
+  try {
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
 export function ws(path: string) {
   if (!WS_BASE) return path
   return `${WS_BASE}${path}`

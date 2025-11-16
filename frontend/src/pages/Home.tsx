@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../lib/config'
+import { api, apiFetch } from '../lib/config'
+import { useAuth } from '../contexts/AuthContext'
 
 interface ModelHealth {
   ok: boolean
@@ -57,25 +58,35 @@ function StatusCard({ title, status, description, icon }: StatusCardProps) {
 }
 
 export default function Home() {
+  const { user } = useAuth()
   const [modelHealth, setModelHealth] = useState<ModelHealth | null>(null)
   const [recentMeetings, setRecentMeetings] = useState<any[]>([])
+  const [loadingMeetings, setLoadingMeetings] = useState(true)
 
   useEffect(() => {
     // モデル健診チェック
-    fetch(api('/api/health/models'))
-      .then(r => r.json())
+    fetch(api('/api/health/models'), { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : Promise.reject(new Error('failed'))))
       .then(setModelHealth)
       .catch(() => setModelHealth({ ok: false, checks: [], summary: 'チェックに失敗しました' }))
 
-    // 最近の会議を取得
-    fetch(api('/api/events?limit=3'))
-      .then(r => r.json())
-      .then(data => {
-        const items = data?.items || data?.events || []
-        setRecentMeetings(items)
+  }, [])
+
+  useEffect(() => {
+    if (!user) {
+      setRecentMeetings([])
+      setLoadingMeetings(false)
+      return
+    }
+    setLoadingMeetings(true)
+    apiFetch(`/api/events?limit=3`)
+      .then((data) => {
+        const items = Array.isArray(data) ? data : data?.items || data?.events || []
+        setRecentMeetings(items || [])
       })
       .catch(() => setRecentMeetings([]))
-  }, [])
+      .finally(() => setLoadingMeetings(false))
+  }, [user])
 
   const getASRStatus = () => {
     if (!modelHealth) return 'loading'
@@ -144,7 +155,9 @@ export default function Home() {
       {/* 最近の会議 */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-semibold mb-4">最近の会議</h2>
-        {recentMeetings.length > 0 ? (
+        {loadingMeetings ? (
+          <p className="text-sm text-gray-500">読み込み中...</p>
+        ) : recentMeetings.length > 0 ? (
           <div className="space-y-3">
             {recentMeetings.map((meeting) => (
               <Link
@@ -156,7 +169,7 @@ export default function Home() {
                   <div>
                     <h3 className="font-medium text-gray-900">{meeting.title}</h3>
                     <p className="text-sm text-gray-500">
-                      {new Date(meeting.start_ts * 1000).toLocaleDateString('ja-JP')}
+                      {new Date(meeting.started_at || meeting.start_ts * 1000).toLocaleDateString('ja-JP')}
                     </p>
                   </div>
                   <span className="text-xs text-gray-400">

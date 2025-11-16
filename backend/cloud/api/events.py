@@ -14,11 +14,15 @@ router = APIRouter()
 
 
 def _serialize_meeting(meeting: Meeting) -> dict:
+    start_ts = int(meeting.started_at.timestamp()) if meeting.started_at else None
+    end_ts = int(meeting.ended_at.timestamp()) if meeting.ended_at else None
     return {
         "id": meeting.id,
         "title": meeting.title,
         "started_at": meeting.started_at.isoformat() if meeting.started_at else None,
         "ended_at": meeting.ended_at.isoformat() if meeting.ended_at else None,
+        "start_ts": start_ts,
+        "end_ts": end_ts,
         "summary": meeting.summary,
         "full_transcript": meeting.full_transcript,
         "google_sync_enabled": meeting.google_sync_enabled,
