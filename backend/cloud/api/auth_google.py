@@ -20,7 +20,7 @@ oauth.register(
     client_secret=settings.google_client_secret or None,
     server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
     client_kwargs={
-        "scope": "openid email profile https://www.googleapis.com/auth/calendar.events",
+        "scope": "openid email profile",
     },
 )
 
