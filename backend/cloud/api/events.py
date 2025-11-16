@@ -43,6 +43,25 @@ def list_events(
     return [_serialize_meeting(m) for m in meetings]
 
 
+@router.get("/events/search")
+def search_events(
+    q: str = "*",
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> List[dict]:
+    """タイトルがあいまい一致するイベント一覧。"""
+    q = (q or "").strip()
+    limit = max(1, min(limit, 50))
+    query = db.query(Meeting).filter(Meeting.user_id == user.id)
+    if q not in ("", "*"):
+        safe = q.replace("%", "\\%").replace("_", "\\_")
+        like = f"%{safe}%"
+        query = query.filter(Meeting.title.ilike(like))
+    meetings = query.order_by(Meeting.started_at.desc()).limit(limit).all()
+    return [_serialize_meeting(m) for m in meetings]
+
+
 @router.get("/events/{meeting_id}")
 def read_event(
     meeting_id: int,

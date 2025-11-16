@@ -20,7 +20,7 @@ class Settings:
     google_calendar_id: str = os.getenv("GOOGLE_CALENDAR_ID", "primary")
 
     cookie_secure: bool = os.getenv("SESSION_COOKIE_SECURE", "1").strip().lower() in {"1", "true", "yes", "on"}
-    cookie_samesite: str = os.getenv("SESSION_COOKIE_SAMESITE", "lax")
+    cookie_samesite: str = os.getenv("SESSION_COOKIE_SAMESITE", "none").lower()
     cookie_max_age: int = int(os.getenv("SESSION_COOKIE_MAX_AGE", str(7 * 24 * 60 * 60)))
 
 
