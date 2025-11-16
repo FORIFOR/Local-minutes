@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from functools import lru_cache
+import os
 
 
 @dataclass
@@ -22,7 +23,7 @@ class Settings:
     cookie_secure: bool = os.getenv("SESSION_COOKIE_SECURE", "1").strip().lower() in {"1", "true", "yes", "on"}
     cookie_samesite: str = os.getenv("SESSION_COOKIE_SAMESITE", "none").lower()
     cookie_max_age: int = int(os.getenv("SESSION_COOKIE_MAX_AGE", str(7 * 24 * 60 * 60)))
-    sqlite_dir: str = os.getenv("CLOUD_SQLITE_DIR", "/var/data")
+    sqlite_dir: str = os.path.abspath(os.getenv("CLOUD_SQLITE_DIR", "./cloud-data"))
 
 
 @lru_cache()

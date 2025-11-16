@@ -10,13 +10,24 @@ from .config import settings
 
 connect_args = {}
 database_url = settings.database_url
+sqlite_dir = settings.sqlite_dir
+
+def _ensure_dir(path: str) -> str:
+    try:
+        os.makedirs(path, exist_ok=True)
+        return path
+    except PermissionError:
+        fallback = os.path.abspath("./cloud-data")
+        os.makedirs(fallback, exist_ok=True)
+        return fallback
+
 if database_url.startswith("sqlite:///"):
     connect_args["check_same_thread"] = False
+    base_dir = _ensure_dir(sqlite_dir)
     path = database_url.replace("sqlite:///", "", 1)
     if not path.startswith("/"):
-        os.makedirs(settings.sqlite_dir, exist_ok=True)
-        path = os.path.join(settings.sqlite_dir, path)
-        database_url = f"sqlite:///{path}"
+        path = os.path.join(base_dir, path)
+    database_url = f"sqlite:///{os.path.abspath(path)}"
 
 engine = create_engine(database_url, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
